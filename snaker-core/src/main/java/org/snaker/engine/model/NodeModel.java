@@ -104,8 +104,8 @@ public abstract class NodeModel extends BaseModel implements Action {
 				interceptor.intercept(execution);
 			}
 		} catch(Exception e) {
-			log.error("拦截器执行失败=" + e.getMessage());
-            throw new SnakerException(e);
+			log.error("拦截器执行失败=" + e.getMessage(),e);
+            throw new SnakerException(e.getMessage(),e);
 		}
 	}
 	
