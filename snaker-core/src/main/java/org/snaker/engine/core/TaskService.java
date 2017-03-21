@@ -54,7 +54,7 @@ public class TaskService extends AccessService implements ITaskService {
 	public Task complete(String taskId, String operator) {
 		return complete(taskId, operator, null);
 	}
-	
+
 	/**
 	 * 完成指定任务
 	 * 该方法仅仅结束活动任务，并不能驱动流程继续执行
@@ -119,7 +119,7 @@ public class TaskService extends AccessService implements ITaskService {
 		access().saveHistory(historyTask);
 		return historyTask;
 	}
-	
+
 	/**
 	 * 提取指定任务，设置完成时间及操作人，状态不改变
 	 */
@@ -156,14 +156,14 @@ public class TaskService extends AccessService implements ITaskService {
             throw new SnakerException("当前参与者[" + operator + "]不允许唤醒历史任务[taskId=" + taskId + "]");
         }
     }
-	
+
 	/**
 	 * 向指定任务添加参与者
 	 */
 	public void addTaskActor(String taskId, String... actors) {
 		addTaskActor(taskId, null, actors);
 	}
-	
+
 	/**
 	 * 向指定任务添加参与者
 	 * 该方法根据performType类型判断是否需要创建新的活动任务
@@ -204,7 +204,7 @@ public class TaskService extends AccessService implements ITaskService {
 			break;
 		}
 	}
-	
+
 	/**
 	 * 向指定任务移除参与者
 	 */
@@ -239,7 +239,7 @@ public class TaskService extends AccessService implements ITaskService {
 			}
 		}
 	}
-	
+
 	/**
 	 * 撤回指定的任务
 	 */
@@ -250,7 +250,7 @@ public class TaskService extends AccessService implements ITaskService {
 		if(hist.isPerformAny()) {
 			tasks = access().getNextActiveTasks(hist.getId());
 		} else {
-			tasks = access().getNextActiveTasks(hist.getOrderId(), 
+			tasks = access().getNextActiveTasks(hist.getOrderId(),
 					hist.getTaskName(), hist.getParentTaskId());
 		}
 		if(tasks == null || tasks.isEmpty()) {
@@ -259,7 +259,7 @@ public class TaskService extends AccessService implements ITaskService {
 		for(Task task : tasks) {
 			access().deleteTask(task);
 		}
-		
+
 		Task task = hist.undoTask();
 		task.setId(StringHelper.getPrimaryKey());
 		task.setCreateTime(DateHelper.getTime());
@@ -267,7 +267,7 @@ public class TaskService extends AccessService implements ITaskService {
 		assignTask(task.getId(), task.getOperator());
 		return task;
 	}
-	
+
 	/**
 	 * 驳回任务
 	 */
@@ -308,7 +308,7 @@ public class TaskService extends AccessService implements ITaskService {
 			access().saveTaskActor(taskActor);
 		}
 	}
-	
+
 	/**
 	 * 根据已有任务、任务类型、参与者创建新的任务
 	 * 适用于转派，动态协办处理
@@ -358,14 +358,20 @@ public class TaskService extends AccessService implements ITaskService {
 	 */
 	public List<Task> createTask(TaskModel taskModel, Execution execution) {
 		List<Task> tasks = new ArrayList<Task>();
-		
+
 		Map<String, Object> args = execution.getArgs();
 		if(args == null) args = new HashMap<String, Object>();
 		Date expireDate = DateHelper.processTime(args, taskModel.getExpireTime());
 		Date remindDate = DateHelper.processTime(args, taskModel.getReminderTime());
+		if(null==remindDate){
+            //只要指定提醒时间属性,则认为必须需要提醒
+			if(StringHelper.isNotEmpty(taskModel.getReminderTime())){
+				remindDate=new Date();
+			}
+		}
 		String form = (String)args.get(taskModel.getForm());
 		String actionUrl = StringHelper.isEmpty(form) ? taskModel.getForm() : form;
-		
+
 		String[] actors = getTaskActors(taskModel, execution);
 		args.put(Task.KEY_ACTOR, StringHelper.getStringByArray(actors));
 		Task task = createTaskBase(taskModel, execution);
@@ -373,7 +379,7 @@ public class TaskService extends AccessService implements ITaskService {
 		task.setExpireDate(expireDate);
 		task.setExpireTime(DateHelper.parseTime(expireDate));
         task.setVariable(JsonHelper.toJson(args));
-		
+
 		if(taskModel.isPerformAny()) {
 			//任务执行方式为参与者中任何一个执行即可驱动流程继续流转，该方法只产生一个task
 			task = saveTask(task, actors);
@@ -395,7 +401,7 @@ public class TaskService extends AccessService implements ITaskService {
 		}
 		return tasks;
 	}
-	
+
 	/**
 	 * 根据模型、执行对象、任务类型构建基本的task对象
 	 * @param model 模型
@@ -413,12 +419,12 @@ public class TaskService extends AccessService implements ITaskService {
 		} else {
 			task.setTaskType(TaskType.Aidant.ordinal());
 		}
-		task.setParentTaskId(execution.getTask() == null ? 
+		task.setParentTaskId(execution.getTask() == null ?
 				START : execution.getTask().getId());
 		task.setModel(model);
 		return task;
 	}
-	
+
 	/**
 	 * 由DBAccess实现类持久化task对象
 	 */
